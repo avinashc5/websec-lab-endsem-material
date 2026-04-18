@@ -1,0 +1,10 @@
+HTTP/1.1 500 Internal Server Error
+Date: Thu, 12 Mar 2026 12:49:39 GMT
+Server: WSGIServer/0.2 CPython/3.9.2
+Content-Type: text/html; charset=utf-8
+X-Frame-Options: DENY
+Content-Length: 60908
+Vary: Cookie
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin

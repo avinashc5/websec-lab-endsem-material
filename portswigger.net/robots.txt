@@ -1,0 +1,4 @@
+User-agent: *
+
+Sitemap: https://portswigger.net/sitemap.xml
+Disallow: /bappstore/bapps/download/
